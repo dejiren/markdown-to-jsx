@@ -269,7 +269,7 @@ const ATTR_EXTRACTOR_R =
 /** TODO: Write explainers for each of these */
 
 const AUTOLINK_MAILTO_CHECK_R = /mailto:/i
-const BLOCK_END_R = /\n{2,}$/
+const BLOCK_END_R = /\n{2,2}$/
 // const BLOCKQUOTE_R = /^( *>[^\n]+(\n[^\n]+)*\n*)+\n{2,}/
 const BLOCKQUOTE_R = /^( *>[^\n]*(\n[^\n]+)*)(\n{2,2})/
 const BLOCKQUOTE_TRIM_LEFT_MULTILINE_R = /^ *> ?/gm
@@ -332,7 +332,7 @@ const LINK_AUTOLINK_MAILTO_R = /^<([^ >]+@[^ >]+)>/
 const LINK_AUTOLINK_R = /^<([^ >]+:\/[^ >]+)>/
 const CAPTURE_LETTER_AFTER_HYPHEN = /-([a-z])?/gi
 const NP_TABLE_R = /^(.*\|?.*)\n *(\|? *[-:]+ *\|[-| :]*)\n((?:.*\|.*\n)*)\n?/
-const PARAGRAPH_R = /^[^\n]+(?:  \n|\n{2,})/
+const PARAGRAPH_R = /^[^\n]+(?:  \n|\n{2,2})/
 const REFERENCE_IMAGE_OR_LINK = /^\[([^\]]*)\]:\s+<?([^\s>]+)>?\s*("([^"]*)")?/
 const REFERENCE_IMAGE_R = /^!\[([^\]]*)\] ?\[([^\]]*)\]/
 const REFERENCE_LINK_R = /^\[([^\]]*)\] ?\[([^\]]*)\]/
@@ -923,6 +923,17 @@ function anyScopeRegex(regex: RegExp) {
   }
 }
 
+function matchEmptyLine(
+  source: string,
+  state: MarkdownToJSX.State,
+  prevCapturedString?: string
+) {
+  if (state._inline || state._simple) {
+    return null
+  }
+  return /^(())(\n\n)/.exec(source)
+}
+
 function matchParagraph(
   source: string,
   state: MarkdownToJSX.State,
@@ -1204,7 +1215,10 @@ export function compiler(
       parser(
         _inline
           ? input
-          : `${input.trimEnd().replace(TRIM_STARTING_NEWLINES, '')}\n\n`,
+          : `${input}${
+              input.endsWith('\n\n') ? '' : input.endsWith('\n') ? '\n' : '\n\n'
+            }`,
+        // : `${input.trimEnd().replace(TRIM_STARTING_NEWLINES, '')}\n\n`,
         {
           _inline,
         }
@@ -1309,6 +1323,19 @@ export function compiler(
    * this allows the override functionality to be automatically applied
    */
   const rules: MarkdownToJSX.Rules = {
+    emptyLine: {
+      _match: matchEmptyLine,
+      _order: Priority.MED,
+      _parse(capture, parse, state) {
+        return {
+          _content: '',
+        }
+      },
+      _react(node, output, state) {
+        return state._inline ? '' : <p key={state._key}></p>
+      },
+    } as MarkdownToJSX.Rule<ReturnType<typeof parseCaptureInline>>,
+
     blockQuote: {
       _match: blockRegex(BLOCKQUOTE_R),
       _order: Priority.HIGH,
