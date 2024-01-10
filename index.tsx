@@ -1332,7 +1332,13 @@ export function compiler(
         }
       },
       _react(node, output, state) {
-        return state._inline ? '' : <p key={state._key}></p>
+        return state._inline ? (
+          ''
+        ) : (
+          <p key={state._key}>
+            <br />
+          </p>
+        )
       },
     } as MarkdownToJSX.Rule<ReturnType<typeof parseCaptureInline>>,
 

@@ -573,6 +573,21 @@ describe('misc block level elements blank', () => {
     </div>
     `)
   })
+  // a\n\n> BB\n\n\n\n> CC\n\n\n\n\n\n\n\n3
+  it('should handle blockquotes with mix line break', () => {
+    render(compiler('a\n\n> BB\n\n\n\n> CC\n\n\n\n\n\n\n\n3'))
+
+    expect(root.innerHTML).toMatchInlineSnapshot(`
+    <div>
+      <p>
+      </p>
+      <blockquote>
+      </blockquote>
+      <p>
+      </p>
+    </div>
+    `)
+  })
 })
 
 describe('headings', () => {
