@@ -1323,7 +1323,7 @@ export function compiler(
       _react(node, output, state) {
         return (
           <blockquote key={state._key}>
-            {output(node._content, state)}
+            {output(node._content, { ...state, _inline: true })}
           </blockquote>
         )
       },
@@ -1640,7 +1640,11 @@ export function compiler(
       _order: Priority.LOW,
       _parse: parseCaptureInline,
       _react(node, output, state) {
-        return <p key={state._key}>{output(node._content, state)}</p>
+        return state._inline ? (
+          <span key={state._key}>{output(node._content, state)}</span>
+        ) : (
+          <p key={state._key}>{output(node._content, state)}</p>
+        )
       },
     } as MarkdownToJSX.Rule<ReturnType<typeof parseCaptureInline>>,
 

@@ -490,9 +490,33 @@ describe('misc block level elements', () => {
 
     expect(root.innerHTML).toMatchInlineSnapshot(`
       <blockquote>
-        <p>
+        <span>
           Something important, perhaps?
-        </p>
+        </span>
+      </blockquote>
+    `)
+  })
+})
+
+describe('misc block level elements blockquotes ', () => {
+  it('should handle blockquotes bulti', () => {
+    render(compiler('> ~~Something~~ **important**, *perhaps?* pure text'))
+
+    expect(root.innerHTML).toMatchInlineSnapshot(`
+      <blockquote>
+        <span>
+          <del>
+            Something
+          </del>
+          <strong>
+            important
+          </strong>
+          ,
+          <em>
+            perhaps?
+          </em>
+          pure text
+        </span>
       </blockquote>
     `)
   })
