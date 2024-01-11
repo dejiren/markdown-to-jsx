@@ -1346,9 +1346,11 @@ export function compiler(
       _match: blockRegex(BLOCKQUOTE_R),
       _order: Priority.HIGH,
       _parse(capture, parse, state) {
+        const inner = capture[0].replace(BLOCKQUOTE_TRIM_LEFT_MULTILINE_R, '')
+        // blockQuote内の空行表現
         return {
           _content: parse(
-            capture[0].replace(BLOCKQUOTE_TRIM_LEFT_MULTILINE_R, ''),
+            inner === '\n\n' || inner === '' ? '<br />' : inner,
             state
           ),
         }

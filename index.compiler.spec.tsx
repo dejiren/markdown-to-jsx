@@ -496,6 +496,89 @@ describe('misc block level elements', () => {
       </blockquote>
     `)
   })
+  it('should handle blockquotes with empty line', () => {
+    render(compiler('> Something important, perhaps?\n\n'))
+
+    expect(root.innerHTML).toMatchInlineSnapshot(`
+      <blockquote>
+        <span>
+          Something important, perhaps?
+        </span>
+      </blockquote>
+    `)
+  })
+  it('should handle blockquotes with empty line', () => {
+    // 後ろに空行
+    render(compiler('> Something important, perhaps?\n\n\n\n'))
+
+    expect(root.innerHTML).toMatchInlineSnapshot(`
+    <div>
+      <blockquote>
+        <span>
+          Something important, perhaps?
+        </span>
+      </blockquote>
+      <p>
+        <br>
+      </p>
+    </div>
+    `)
+  })
+  it('should handle blockquotes with empty line', () => {
+    // 前に空行
+    render(compiler('\n\n> Something important, perhaps?\n\n\n\n'))
+
+    expect(root.innerHTML).toMatchInlineSnapshot(`
+    <div>
+      <p>
+        <br>
+      </p>
+      <blockquote>
+        <span>
+          Something important, perhaps?
+        </span>
+      </blockquote>
+      <p>
+        <br>
+      </p>
+    </div>
+    `)
+  })
+  it('should handle blockquotes with empty line', () => {
+    // 前に空行1 後ろに空行1 真ん中に空行２
+    render(
+      compiler(
+        '\n\n> Something important, perhaps?\n\n\n\n\n\n> 2Something important, perhaps?\n\n\n\n'
+      )
+    )
+
+    expect(root.innerHTML).toMatchInlineSnapshot(`
+    <div>
+      <p>
+        <br>
+      </p>
+      <blockquote>
+        <span>
+          Something important, perhaps?
+        </span>
+      </blockquote>
+      <p>
+        <br>
+      </p>
+      <p>
+        <br>
+      </p>
+      <blockquote>
+        <span>
+          2Something important, perhaps?
+        </span>
+      </blockquote>
+      <p>
+        <br>
+      </p>
+    </div>
+    `)
+  })
 })
 
 describe('misc block level elements blockquotes ', () => {
@@ -528,6 +611,7 @@ describe('misc block level elements blank', () => {
 
     expect(root.innerHTML).toMatchInlineSnapshot(`
       <blockquote>
+        <br>
       </blockquote>
     `)
   })
@@ -536,6 +620,7 @@ describe('misc block level elements blank', () => {
 
     expect(root.innerHTML).toMatchInlineSnapshot(`
       <blockquote>
+        <br>
       </blockquote>
     `)
   })
@@ -544,6 +629,7 @@ describe('misc block level elements blank', () => {
 
     expect(root.innerHTML).toMatchInlineSnapshot(`
       <blockquote>
+        <br>
       </blockquote>
     `)
   })
@@ -553,8 +639,10 @@ describe('misc block level elements blank', () => {
     expect(root.innerHTML).toMatchInlineSnapshot(`
     <div>
       <blockquote>
+        <br>
       </blockquote>
       <p>
+        <br>
       </p>
     </div>
     `)
@@ -565,10 +653,13 @@ describe('misc block level elements blank', () => {
     expect(root.innerHTML).toMatchInlineSnapshot(`
     <div>
       <p>
+        <br>
       </p>
       <blockquote>
+        <br>
       </blockquote>
       <p>
+        <br>
       </p>
     </div>
     `)
@@ -580,10 +671,32 @@ describe('misc block level elements blank', () => {
     expect(root.innerHTML).toMatchInlineSnapshot(`
     <div>
       <p>
+        a
       </p>
       <blockquote>
+        <span>
+          BB
+        </span>
       </blockquote>
       <p>
+        <br>
+      </p>
+      <blockquote>
+        <span>
+          CC
+        </span>
+      </blockquote>
+      <p>
+        <br>
+      </p>
+      <p>
+        <br>
+      </p>
+      <p>
+        <br>
+      </p>
+      <p>
+        3
       </p>
     </div>
     `)
@@ -980,6 +1093,7 @@ describe('links', () => {
 
     expect(root.innerHTML).toMatchInlineSnapshot(`
       <p>
+        <br>
       </p>
     `)
   })
@@ -990,10 +1104,13 @@ describe('links', () => {
     expect(root.innerHTML).toMatchInlineSnapshot(`
     <div>
       <p>
+        <br>
       </p>
       <p>
+        <br>
       </p>
       <p>
+        <br>
       </p>
     </div>
     `)
@@ -1005,11 +1122,13 @@ describe('links', () => {
     expect(root.innerHTML).toMatchInlineSnapshot(`
     <div>
       <p>
+        <br>
       </p>
       <p>
         1
       </p>
       <p>
+        <br>
       </p>
     </div>
     `)
@@ -1027,14 +1146,77 @@ describe('links', () => {
         2
       </p>
       <p>
+        <br>
       </p>
       <p>
+        <br>
       </p>
       <p>
         3
       </p>
       <p>
+        <br>
       </p>
+    </div>
+    `)
+  })
+
+  it('multi line with empty line and quote', () => {
+    render(
+      compiler(
+        '\n\n> t1\n\n> \n\n\n\n\n\n> t2\n\n> \n\n> t21\n\n\n\n\n\n\n\n> \n\n> t3'
+      )
+    )
+
+    expect(root.innerHTML).toMatchInlineSnapshot(`
+    <div>
+      <p>
+        <br>
+      </p>
+      <blockquote>
+        <span>
+          t1
+        </span>
+      </blockquote>
+      <blockquote>
+        <br>
+      </blockquote>
+      <p>
+        <br>
+      </p>
+      <p>
+        <br>
+      </p>
+      <blockquote>
+        <span>
+          t2
+        </span>
+      </blockquote>
+      <blockquote>
+        <br>
+      </blockquote>
+      <blockquote>
+        <span>
+          t21
+        </span>
+      </blockquote>
+      <p>
+        <br>
+      </p>
+      <p>
+        <br>
+      </p>
+      <p>
+        <br>
+      </p>
+      <blockquote>
+        <br>
+      </blockquote>
+      <blockquote>
+        <span>
+          t3
+        </span>
+      </blockquote>
     </div>
     `)
   })
