@@ -1264,9 +1264,6 @@ export function compiler(
       wrapper,
       {
         key: 'outer',
-        ...(process.env.NODE_ENV !== 'test'
-          ? { className: 'dejiren-markdown-body' }
-          : {}),
       },
       jsx
     )

@@ -1349,6 +1349,18 @@ describe('links', () => {
     `)
   })
 
+  it('should +phone', () => {
+    render(compiler(' +0312345678'))
+
+    expect(root.innerHTML).toMatchInlineSnapshot(`
+    <span>
+      <a href="+0312345678">
+        +0312345678
+      </a>
+    </span>
+    `)
+  })
+
   it('should phone', () => {
     const TestA = () => <a href="https://google.com">03-1234-5678</a>
 
