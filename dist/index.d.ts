@@ -17,6 +17,7 @@ export declare namespace MarkdownToJSX {
         _inAnchor?: boolean;
         _inline?: boolean;
         _inTable?: boolean;
+        _inQuote?: boolean;
         _key?: React.Key;
         _list?: boolean;
         _simple?: boolean;
@@ -119,6 +120,9 @@ export declare namespace MarkdownToJSX {
     }>;
     export {};
 }
+export declare const URI_PATTERN: RegExp;
+export declare const EMAIL_PATTERN: RegExp;
+export declare const PHONE_PATTERN: RegExp;
 declare enum Priority {
     /**
      * anything that must scan the tree before everything else
