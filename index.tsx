@@ -26,6 +26,7 @@ export namespace MarkdownToJSX {
     _inAnchor?: boolean
     _inline?: boolean
     _inTable?: boolean
+    _inQuote?: boolean
     _key?: React.Key
     _list?: boolean
     _simple?: boolean
@@ -327,7 +328,6 @@ const HTML_CUSTOM_ATTR_R = /^(data|aria|x)-[a-z_][a-z\d_.-]*$/
 const HTML_SELF_CLOSING_ELEMENT_R =
   /^ *<([a-z][a-z0-9:]*)(?:\s+((?:<.*?>|[^>])*))?\/?>(?!<\/\1>)(\s*\n)?/i
 const INTERPOLATION_R = /^\{.*\}$/
-const LINK_AUTOLINK_BARE_URL_R = /^(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/
 const LINK_AUTOLINK_MAILTO_R = /^<([^ >]+@[^ >]+)>/
 const LINK_AUTOLINK_R = /^<([^ >]+:\/[^ >]+)>/
 const CAPTURE_LETTER_AFTER_HYPHEN = /-([a-z])?/gi
@@ -355,7 +355,7 @@ const TEXT_STRIKETHROUGHED_R = /^~~((?:\[.*?\]|<.*?>(?:.*?<.*?>)?|`.*?`|.)*?)~~/
 
 const TEXT_ESCAPED_R = /^\\([^0-9A-Za-z\s_])/
 const TEXT_PLAIN_R =
-  /^[\s\S]+?(?=[^0-9A-Z\s_\u00c0-\uffff&#;.()'"]|\d+\.|\n\n| {2,}\n|\w+:\S|$)/i
+  /^[\s\S]+?(?=[^0-9A-Z\s_\u00c0-\uffff&#;.()'"]|([a-zA-Z\d.+^!@#$%^&*()_-]+@[a-zA-Z\d.-]+)|[\d]+|\n\n| {2,}\n|[\w-]+:\S|$)/i
 
 const TRIM_STARTING_NEWLINES = /^\n+/
 
@@ -572,6 +572,11 @@ function generateListRule(h: any, type: LIST_TYPE) {
 }
 
 const LINK_R = /^\[([^\]]*)]\( *((?:\([^)]*\)|[^() ])*) *"?([^)"]*)?"?\)/
+// from dejiren
+export const URI_PATTERN = /^([\w-]+:\/\/[\w/:;%#$&!?()~.=+@*,[\]{}-]+)/
+export const EMAIL_PATTERN = /^([a-zA-Z\d.+^!@#$%^&*()_-]+@[a-zA-Z\d.-]+)/
+export const PHONE_PATTERN = /^(\+?\d{0,2}\(?\d{2,4}[)-]?\d{2,4}-?\d{4})/
+
 const IMAGE_R = /^!\[([^\]]*)]\( *((?:\([^)]*\)|[^() ])*) *"?([^)"]*)?"?\)/
 
 const NON_PARAGRAPH_BLOCK_SYNTAXES = [
@@ -1255,7 +1260,13 @@ export function compiler(
       jsx = null
     }
 
-    return React.createElement(wrapper, { key: 'outer' }, jsx)
+    return React.createElement(
+      wrapper,
+      {
+        key: 'outer',
+      },
+      jsx
+    )
   }
 
   function attrStringToMap(str: string): JSX.IntrinsicAttributes {
@@ -1358,7 +1369,7 @@ export function compiler(
       _react(node, output, state) {
         return (
           <blockquote key={state._key}>
-            {output(node._content, { ...state, _inline: true })}
+            {output(node._content, { ...state, _inQuote: true })}
           </blockquote>
         )
       },
@@ -1615,10 +1626,54 @@ export function compiler(
         if (state._inAnchor) {
           return null
         }
-        return inlineRegex(LINK_AUTOLINK_BARE_URL_R)(source, state)
+        return inlineRegex(URI_PATTERN)(source, state)
       },
       _order: Priority.MAX,
       _parse(capture /*, parse, state*/) {
+        return {
+          _content: [
+            {
+              _content: capture[1],
+              type: 'text',
+            },
+          ],
+          _target: capture[1],
+          _title: undefined,
+          type: 'link',
+        }
+      },
+    },
+    linkBareEmailDetector: {
+      _match: (source, state) => {
+        if (state._inAnchor) {
+          return null
+        }
+        return inlineRegex(EMAIL_PATTERN)(source, state)
+      },
+      _order: Priority.MAX,
+      _parse(capture, parse, state) {
+        return {
+          _content: [
+            {
+              _content: capture[1],
+              type: 'text',
+            },
+          ],
+          _target: capture[1],
+          _title: undefined,
+          type: 'link',
+        }
+      },
+    },
+    linkBarePhoneDetector: {
+      _match: (source, state) => {
+        if (state._inAnchor) {
+          return null
+        }
+        return inlineRegex(PHONE_PATTERN)(source, state)
+      },
+      _order: Priority.MAX,
+      _parse(capture, parse, state) {
         return {
           _content: [
             {
@@ -1675,7 +1730,7 @@ export function compiler(
       _order: Priority.LOW,
       _parse: parseCaptureInline,
       _react(node, output, state) {
-        return state._inline ? (
+        return state._inQuote ? (
           <span key={state._key}>{output(node._content, state)}</span>
         ) : (
           <p key={state._key}>{output(node._content, state)}</p>
