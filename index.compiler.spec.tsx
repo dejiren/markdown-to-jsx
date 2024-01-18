@@ -478,7 +478,7 @@ describe('inline textual elements', () => {
 
     expect(root.innerHTML).toMatchInlineSnapshot(`
       <span>
-        Apostrophe's and less than ≤ equal
+        Apostrophe&amp;#39;s and less than ≤ equal
       </span>
     `)
   })
@@ -1233,6 +1233,139 @@ describe('links', () => {
           header
         </h1>
       </div>
+    `)
+  })
+
+  it('should link overrides', () => {
+    const TestA = () => <a href="https://google.com">test</a>
+
+    render(
+      compiler('https://google.com', {
+        overrides: {
+          a: {
+            component: TestA,
+          },
+        },
+      })
+    )
+
+    expect(root.innerHTML).toMatchInlineSnapshot(`
+      <a href="https://google.com">
+        test
+      </a>
+    `)
+  })
+
+  // \n
+  it('should url with text', () => {
+    render(
+      compiler(
+        's@test.com test://www.yahoo.co.jp &nps;test2&nps; s@test.com 03-1234-5678 test1://www.yahoo.co.jp test2://www.yahoo.co.jp test3://www.yahoo.co.jp',
+        {
+          disableParsingRawHTML: true,
+        }
+      )
+    )
+    expect(root.innerHTML).toMatchInlineSnapshot(`
+  <span>
+    <a href="s@test.com">
+      s@test.com
+    </a>
+    <a href="test://www.yahoo.co.jp">
+      test://www.yahoo.co.jp
+    </a>
+    &amp;nps;test2&amp;nps;
+    <a href="s@test.com">
+      s@test.com
+    </a>
+    <a href="03-1234-5678">
+      03-1234-5678
+    </a>
+    <a href="test1://www.yahoo.co.jp">
+      test1://www.yahoo.co.jp
+    </a>
+    <a href="test2://www.yahoo.co.jp">
+      test2://www.yahoo.co.jp
+    </a>
+    <a href="test3://www.yahoo.co.jp">
+      test3://www.yahoo.co.jp
+    </a>
+  </span>
+  `)
+  })
+
+  it('should email', () => {
+    const TestA = () => <a href="https://google.com">email</a>
+
+    render(
+      compiler('s@test.com', {
+        overrides: {
+          a: {
+            component: TestA,
+          },
+        },
+      })
+    )
+
+    expect(root.innerHTML).toMatchInlineSnapshot(`
+      <a href="https://google.com">
+        email
+      </a>
+    `)
+  })
+
+  it('should url email phone', () => {
+    const TestA = () => <a href="https://google.com">all</a>
+
+    render(
+      compiler(
+        'text1&nbsp;https://google.com|&nbsp;&nbsp;s@test.com &nbsp;&nbsp;03-1234-5678 &nbsp;&nbsp;text2',
+        {
+          overrides: {
+            a: {
+              component: TestA,
+            },
+          },
+        }
+      )
+    )
+
+    expect(root.innerHTML).toMatchInlineSnapshot(`
+      <span>
+        text1&nbsp;
+        <a href="https://google.com">
+          all
+        </a>
+        |&nbsp;&nbsp;
+        <a href="https://google.com">
+          all
+        </a>
+        &nbsp;&nbsp;
+        <a href="https://google.com">
+          all
+        </a>
+        &nbsp;&nbsp;text2
+      </span>
+    `)
+  })
+
+  it('should phone', () => {
+    const TestA = () => <a href="https://google.com">03-1234-5678</a>
+
+    render(
+      compiler('03-1234-5678', {
+        overrides: {
+          a: {
+            component: TestA,
+          },
+        },
+      })
+    )
+
+    expect(root.innerHTML).toMatchInlineSnapshot(`
+      <a href="https://google.com">
+        03-1234-5678
+      </a>
     `)
   })
 
