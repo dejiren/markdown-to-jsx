@@ -26,6 +26,7 @@ export namespace MarkdownToJSX {
     _inAnchor?: boolean
     _inline?: boolean
     _inTable?: boolean
+    _inQuote?: boolean
     _key?: React.Key
     _list?: boolean
     _simple?: boolean
@@ -269,8 +270,9 @@ const ATTR_EXTRACTOR_R =
 /** TODO: Write explainers for each of these */
 
 const AUTOLINK_MAILTO_CHECK_R = /mailto:/i
-const BLOCK_END_R = /\n{2,}$/
-const BLOCKQUOTE_R = /^( *>[^\n]+(\n[^\n]+)*\n*)+\n{2,}/
+const BLOCK_END_R = /\n{2,2}$/
+// const BLOCKQUOTE_R = /^( *>[^\n]+(\n[^\n]+)*\n*)+\n{2,}/
+const BLOCKQUOTE_R = /^( *>[^\n]*(\n[^\n]+)*)(\n{2,2})/
 const BLOCKQUOTE_TRIM_LEFT_MULTILINE_R = /^ *> ?/gm
 const BREAK_LINE_R = /^ {2,}\n/
 const BREAK_THEMATIC_R = /^(?:( *[-*_])){3,} *(?:\n *)+\n/
@@ -314,7 +316,7 @@ const HEADING_SETEXT_R = /^([^\n]+)\n *(=|-){3,} *(?:\n *)+\n/
 const HTML_BLOCK_ELEMENT_R =
   /^ *(?!<[a-z][^ >/]* ?\/>)<([a-z][^ >/]*) ?([^>]*)\/{0}>\n?(\s*(?:<\1[^>]*?>[\s\S]*?<\/\1>|(?!<\1)[\s\S])*?)<\/\1>\n*/i
 
-const HTML_CHAR_CODE_R = /&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-fA-F]{1,6});/ig
+const HTML_CHAR_CODE_R = /&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-fA-F]{1,6});/gi
 
 const HTML_COMMENT_R = /^<!--[\s\S]*?(?:-->)/
 
@@ -326,12 +328,11 @@ const HTML_CUSTOM_ATTR_R = /^(data|aria|x)-[a-z_][a-z\d_.-]*$/
 const HTML_SELF_CLOSING_ELEMENT_R =
   /^ *<([a-z][a-z0-9:]*)(?:\s+((?:<.*?>|[^>])*))?\/?>(?!<\/\1>)(\s*\n)?/i
 const INTERPOLATION_R = /^\{.*\}$/
-const LINK_AUTOLINK_BARE_URL_R = /^(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/
 const LINK_AUTOLINK_MAILTO_R = /^<([^ >]+@[^ >]+)>/
 const LINK_AUTOLINK_R = /^<([^ >]+:\/[^ >]+)>/
 const CAPTURE_LETTER_AFTER_HYPHEN = /-([a-z])?/gi
 const NP_TABLE_R = /^(.*\|?.*)\n *(\|? *[-:]+ *\|[-| :]*)\n((?:.*\|.*\n)*)\n?/
-const PARAGRAPH_R = /^[^\n]+(?:  \n|\n{2,})/
+const PARAGRAPH_R = /^[^\n]+(?:  \n|\n{2,2})/
 const REFERENCE_IMAGE_OR_LINK = /^\[([^\]]*)\]:\s+<?([^\s>]+)>?\s*("([^"]*)")?/
 const REFERENCE_IMAGE_R = /^!\[([^\]]*)\] ?\[([^\]]*)\]/
 const REFERENCE_LINK_R = /^\[([^\]]*)\] ?\[([^\]]*)\]/
@@ -349,12 +350,11 @@ const TEXT_BOLD_R =
   /^([*_])\1((?:\[.*?\][([].*?[)\]]|<.*?>(?:.*?<.*?>)?|`.*?`|~+.*?~+|.)*?)\1\1(?!\1)/
 const TEXT_EMPHASIZED_R =
   /^([*_])((?:\[.*?\][([].*?[)\]]|<.*?>(?:.*?<.*?>)?|`.*?`|~+.*?~+|.)*?)\1(?!\1|\w)/
-const TEXT_MARKED_R = /^==((?:\[.*?\]|<.*?>(?:.*?<.*?>)?|`.*?`|.)*?)==/
 const TEXT_STRIKETHROUGHED_R = /^~~((?:\[.*?\]|<.*?>(?:.*?<.*?>)?|`.*?`|.)*?)~~/
 
 const TEXT_ESCAPED_R = /^\\([^0-9A-Za-z\s])/
 const TEXT_PLAIN_R =
-  /^[\s\S]+?(?=[^0-9A-Z\s\u00c0-\uffff&#;.()'"]|\d+\.|\n\n| {2,}\n|\w+:\S|$)/i
+  /^[\s\S]+?(?=[^0-9A-Z\s\u00c0-\uffff&#;.()'"]|([a-zA-Z\d.+^!@#$%^&*()_-]+@[a-zA-Z\d.-]+)|[\d]+|\n\n| {2,}\n|[\w-]+:\S|$)/i
 
 const TRIM_STARTING_NEWLINES = /^\n+/
 
@@ -571,6 +571,11 @@ function generateListRule(h: any, type: LIST_TYPE) {
 }
 
 const LINK_R = /^\[([^\]]*)]\( *((?:\([^)]*\)|[^() ])*) *"?([^)"]*)?"?\)/
+// from dejiren
+export const URI_PATTERN = /^([\w-]+:\/\/[\w/:;%#$&!?()~.=+@*,[\]{}-]+)/
+export const EMAIL_PATTERN = /^([a-zA-Z\d.+^!@#$%^&*()_-]+@[a-zA-Z\d.-]+)/
+export const PHONE_PATTERN = /^(\+?\d{0,2}\(?\d{2,4}[)-]?\d{2,4}-?\d{4})/
+
 const IMAGE_R = /^!\[([^\]]*)]\( *((?:\([^)]*\)|[^() ])*) *"?([^)"]*)?"?\)/
 
 const NON_PARAGRAPH_BLOCK_SYNTAXES = [
@@ -922,6 +927,17 @@ function anyScopeRegex(regex: RegExp) {
   }
 }
 
+function matchEmptyLine(
+  source: string,
+  state: MarkdownToJSX.State,
+  prevCapturedString?: string
+) {
+  if (state._inline || state._simple) {
+    return null
+  }
+  return /^(())(\n\n)/.exec(source)
+}
+
 function matchParagraph(
   source: string,
   state: MarkdownToJSX.State,
@@ -1203,7 +1219,10 @@ export function compiler(
       parser(
         _inline
           ? input
-          : `${input.trimEnd().replace(TRIM_STARTING_NEWLINES, '')}\n\n`,
+          : `${input}${
+              input.endsWith('\n\n') ? '' : input.endsWith('\n') ? '\n' : '\n\n'
+            }`,
+        // : `${input.trimEnd().replace(TRIM_STARTING_NEWLINES, '')}\n\n`,
         {
           _inline,
         }
@@ -1240,7 +1259,13 @@ export function compiler(
       jsx = null
     }
 
-    return React.createElement(wrapper, { key: 'outer' }, jsx)
+    return React.createElement(
+      wrapper,
+      {
+        key: 'outer',
+      },
+      jsx
+    )
   }
 
   function attrStringToMap(str: string): JSX.IntrinsicAttributes {
@@ -1308,13 +1333,34 @@ export function compiler(
    * this allows the override functionality to be automatically applied
    */
   const rules: MarkdownToJSX.Rules = {
+    emptyLine: {
+      _match: matchEmptyLine,
+      _order: Priority.MED,
+      _parse(capture, parse, state) {
+        return {
+          _content: '',
+        }
+      },
+      _react(node, output, state) {
+        return state._inline ? (
+          ''
+        ) : (
+          <p key={state._key}>
+            <br />
+          </p>
+        )
+      },
+    } as MarkdownToJSX.Rule<ReturnType<typeof parseCaptureInline>>,
+
     blockQuote: {
       _match: blockRegex(BLOCKQUOTE_R),
       _order: Priority.HIGH,
       _parse(capture, parse, state) {
+        const inner = capture[0].replace(BLOCKQUOTE_TRIM_LEFT_MULTILINE_R, '')
+        // blockQuote内の空行表現
         return {
           _content: parse(
-            capture[0].replace(BLOCKQUOTE_TRIM_LEFT_MULTILINE_R, ''),
+            inner === '\n\n' || inner === '' ? '<br />' : inner,
             state
           ),
         }
@@ -1322,7 +1368,7 @@ export function compiler(
       _react(node, output, state) {
         return (
           <blockquote key={state._key}>
-            {output(node._content, state)}
+            {output(node._content, { ...state, _inQuote: true })}
           </blockquote>
         )
       },
@@ -1347,7 +1393,7 @@ export function compiler(
     },
 
     codeBlock: {
-      _match: blockRegex(CODE_BLOCK_R),
+      _match: (source: string, state: MarkdownToJSX.State) => null, //blockRegex(CODE_BLOCK_R),
       _order: Priority.MAX,
       _parse(capture /*, parse, state*/) {
         return {
@@ -1375,7 +1421,7 @@ export function compiler(
     }>,
 
     codeFenced: {
-      _match: blockRegex(CODE_BLOCK_FENCED_R),
+      _match: (source: string, state: MarkdownToJSX.State) => null, // blockRegex(CODE_BLOCK_FENCED_R),
       _order: Priority.MAX,
       _parse(capture /*, parse, state*/) {
         return {
@@ -1389,7 +1435,7 @@ export function compiler(
     },
 
     codeInline: {
-      _match: simpleInlineRegex(CODE_INLINE_R),
+      _match: (source: string, state: MarkdownToJSX.State) => null, // simpleInlineRegex(CODE_INLINE_R),
       _order: Priority.LOW,
       _parse(capture /*, parse, state*/) {
         return {
@@ -1579,10 +1625,54 @@ export function compiler(
         if (state._inAnchor) {
           return null
         }
-        return inlineRegex(LINK_AUTOLINK_BARE_URL_R)(source, state)
+        return inlineRegex(URI_PATTERN)(source, state)
       },
       _order: Priority.MAX,
       _parse(capture /*, parse, state*/) {
+        return {
+          _content: [
+            {
+              _content: capture[1],
+              type: 'text',
+            },
+          ],
+          _target: capture[1],
+          _title: undefined,
+          type: 'link',
+        }
+      },
+    },
+    linkBareEmailDetector: {
+      _match: (source, state) => {
+        if (state._inAnchor) {
+          return null
+        }
+        return inlineRegex(EMAIL_PATTERN)(source, state)
+      },
+      _order: Priority.MAX,
+      _parse(capture, parse, state) {
+        return {
+          _content: [
+            {
+              _content: capture[1],
+              type: 'text',
+            },
+          ],
+          _target: capture[1],
+          _title: undefined,
+          type: 'link',
+        }
+      },
+    },
+    linkBarePhoneDetector: {
+      _match: (source, state) => {
+        if (state._inAnchor) {
+          return null
+        }
+        return inlineRegex(PHONE_PATTERN)(source, state)
+      },
+      _order: Priority.MAX,
+      _parse(capture, parse, state) {
         return {
           _content: [
             {
@@ -1639,7 +1729,11 @@ export function compiler(
       _order: Priority.LOW,
       _parse: parseCaptureInline,
       _react(node, output, state) {
-        return <p key={state._key}>{output(node._content, state)}</p>
+        return state._inQuote ? (
+          <span key={state._key}>{output(node._content, state)}</span>
+        ) : (
+          <p key={state._key}>{output(node._content, state)}</p>
+        )
       },
     } as MarkdownToJSX.Rule<ReturnType<typeof parseCaptureInline>>,
 
@@ -1835,15 +1929,6 @@ export function compiler(
       },
     },
 
-    textMarked: {
-      _match: simpleInlineRegex(TEXT_MARKED_R),
-      _order: Priority.LOW,
-      _parse: parseCaptureInline,
-      _react(node, output, state) {
-        return <mark key={state._key}>{output(node._content, state)}</mark>
-      },
-    } as MarkdownToJSX.Rule<ReturnType<typeof parseCaptureInline>>,
-
     textStrikethroughed: {
       _match: simpleInlineRegex(TEXT_STRIKETHROUGHED_R),
       _order: Priority.LOW,
@@ -1997,7 +2082,10 @@ const Markdown: React.FC<{
   options?: MarkdownToJSX.Options
 }> = ({ children, options, ...props }) => {
   if (process.env.NODE_ENV !== 'production' && typeof children !== 'string') {
-    console.error('markdown-to-jsx: <Markdown> component only accepts a single string as a child, received:', children)
+    console.error(
+      'markdown-to-jsx: <Markdown> component only accepts a single string as a child, received:',
+      children
+    )
   }
 
   return React.cloneElement(
